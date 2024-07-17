@@ -4,7 +4,7 @@
 //  Created:
 //    17 Jul 2024, 19:03:23
 //  Last edited:
-//    17 Jul 2024, 19:38:07
+//    17 Jul 2024, 22:29:57
 //  Auto updated?
 //    Yes
 //
@@ -55,6 +55,8 @@ pub enum Error {
     ConfigWrite { path: PathBuf, err: serde_yml::Error },
     /// Failed to create a default not found file.
     NotFoundFileCreate { path: PathBuf, err: std::io::Error },
+    /// Failed to canonicalize the site directory path.
+    SiteDirCanonicalize { path: PathBuf, err: std::io::Error },
     /// Failed to create the site directory.
     SiteDirCreate { path: PathBuf, err: std::io::Error },
 }
@@ -69,6 +71,7 @@ impl Display for Error {
             ConfigCreate { path, .. } => write!(f, "Failed to create default config file '{}'", path.display()),
             ConfigWrite { path, .. } => write!(f, "Failed to write to default config file '{}'", path.display()),
             NotFoundFileCreate { path, .. } => write!(f, "Failed to create default not found file '{}'", path.display()),
+            SiteDirCanonicalize { path, .. } => write!(f, "Failed to canonicalize site directory path '{}'", path.display()),
             SiteDirCreate { path, .. } => write!(f, "Failed to create site directory '{}'", path.display()),
         }
     }
@@ -84,6 +87,7 @@ impl error::Error for Error {
             ConfigCreate { err, .. } => Some(err),
             ConfigWrite { err, .. } => Some(err),
             NotFoundFileCreate { err, .. } => Some(err),
+            SiteDirCanonicalize { err, .. } => Some(err),
             SiteDirCreate { err, .. } => Some(err),
         }
     }
@@ -163,6 +167,12 @@ impl Context {
                 return Err(Error::SiteDirCreate { path: config.site, err });
             }
         }
+        // Use the canonical version of the site
+        config.site = match fs::canonicalize(&config.site) {
+            Ok(path) => path,
+            Err(err) => return Err(Error::SiteDirCanonicalize { path: config.site, err }),
+        };
+
         // Create the not found file if it doesn't exist
         if !config.not_found_file.exists() {
             warn!("Not found file '{}' does not exist; creating it...", config.not_found_file.display());
