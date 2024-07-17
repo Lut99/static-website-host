@@ -1,0 +1,26 @@
+services:
+  #########################
+  ## STATIC WEBSITE HOST ##
+  #########################
+
+  # The Rust webserver
+  static-website-host:
+    build:
+      dockerfile: ./Dockerfile
+      context: .
+      target: release
+    container_name: static-website-host
+    user: static-website-host
+    restart: always
+    command:
+    - --address
+    - 0.0.0.0:42080
+    ports:
+    - 80:42080
+    volumes:
+    - ./config.yml:/config.yml
+    - ./www:/www
+
+networks:
+  static-website-host:
+    driver: default
